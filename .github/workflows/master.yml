@@ -3,7 +3,7 @@ name: Deploy Supabase Edge Functions
 on:
   push:
     branches:
-      - master # SİZİN ƏSAS BRANCH-İNİZİN ADI (main və ya master)
+      - master # SİZİN ƏSAS BRANCH-İNİZİN ADI
     paths:
       - 'supabase/functions/**'
   workflow_dispatch:
@@ -14,7 +14,9 @@ jobs:
 
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      # SUPABASE_PROJECT_ID environment variable-ı hələ də faydalı ola bilər,
+      # əgər CLI onu başqa məqsədlər üçün oxuyursa, amma deploy əmrindən çıxarırıq.
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }} 
 
     steps:
       - name: Checkout code
@@ -27,5 +29,5 @@ jobs:
 
       - name: Deploy 'analyzeExamResult' Edge Function
         run: |
-          echo "Deploying 'analyzeExamResult' function to project ${{ env.SUPABASE_PROJECT_ID }}"
-          supabase functions deploy analyzeExamResult --project-id ${{ env.SUPABASE_PROJECT_ID }} --no-verify-jwt
+          echo "Deploying 'analyzeExamResult' function (project ID will be inferred by CLI)"
+          supabase functions deploy analyzeExamResult --no-verify-jwt

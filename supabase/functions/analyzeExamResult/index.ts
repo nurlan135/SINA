@@ -21,7 +21,7 @@ serve(async (req: Request) => {
     // Supabase URL və Anon Açarını Environment Variable-dan yeni adlarla alırıq
     const projectUrl = Deno.env.get('PROJECT_URL');
     const projectAnonKey = Deno.env.get('PROJECT_ANON_KEY');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseServiceKey = Deno.env.get('PROJECT_SERVICE_ROLE_KEY');
 
     if (!projectUrl || !projectAnonKey) {
       console.error('PROJECT_URL və ya PROJECT_ANON_KEY environment variable-larda təyin edilməyib!');

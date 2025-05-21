@@ -134,7 +134,7 @@ serve(async (req: Request) => {
 
     // ----- OpenRouter/Llama 3 API Çağırışı -----
     const openRouterApiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    const modelToUse = "meta-llama/llama-3-8b-instruct"; // Dəqiq model adını yoxlayın
+    const modelToUse = "meta-llama/llama-3.3-8b-instruct:free"; // Dəqiq model adını yoxlayın
 
     const requestBodyForAI = {
       model: modelToUse,

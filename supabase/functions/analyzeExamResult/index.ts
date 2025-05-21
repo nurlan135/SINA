@@ -1,112 +1,76 @@
 // supabase/functions/analyzeExamResult/index.ts
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
-// CORS başlıqları
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*', // Production-da öz domeninizlə əvəz edin
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS', 
 };
 
-console.log("analyzeExamResult Edge Function (Llama 3 via OpenRouter) yükləndi.");
+console.log("analyzeExamResult Edge Function (v1 - exam_id qəbul etmə) yükləndi.");
 
 serve(async (req: Request) => {
-  // CORS preflight sorğusunu idarə et
+  // CORS preflight (OPTIONS) sorğusunu idarə et
   if (req.method === 'OPTIONS') {
+    console.log("OPTIONS sorğusu qəbul edildi.");
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     console.log("analyzeExamResult: Yeni sorğu qəbul edildi - Metod:", req.method);
 
-    // OpenRouter API açarını Environment Variable-dan al
+    // OpenRouter API açarını Environment Variable-dan al (hələlik istifadə etmirik, amma yoxlayaq)
     const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
     if (!OPENROUTER_API_KEY) {
-      console.error('OpenRouter API açarı Environment Variable-da təyin edilməyib!');
-      throw new Error('Server konfiqurasiya xətası: API açarı tapılmadı.');
+      // Bu mərhələdə API açarının olmaması funksiyanın işini dayandırmasın,
+      // çünki hələ API çağırışı etmirik. Amma xəbərdarlıq verək.
+      console.warn('OpenRouter API açarı Environment Variable-da təyin edilməyib! Növbəti addımlarda lazım olacaq.');
+      // throw new Error('Server konfiqurasiya xətası: API açarı tapılmadı.'); // Hələlik bunu şərhə alaq
     }
 
-    // Klientdən gələn JSON məlumatını al
-    let userPrompt = "Azərbaycan haqqında 3 maraqlı fakt de."; // Defolt prompt
-    if (req.method === 'POST') {
-        try {
-            const body = await req.json();
-            if (body && body.prompt && typeof body.prompt === 'string') {
-                userPrompt = body.prompt;
-            } else {
-                console.warn("Gələn body-də 'prompt' sahəsi yoxdur və ya string deyil, defolt prompt istifadə olunur.");
-            }
-        } catch (e) {
-            console.warn("JSON body parse edilə bilmədi, defolt prompt istifadə olunur.", e.message);
-        }
-    } else {
-        console.log("GET sorğusu, defolt prompt istifadə olunur.");
+    if (req.method !== 'POST') {
+      console.log("Yalnız POST sorğuları qəbul edilir. Qaytarılan status: 405");
+      return new Response(JSON.stringify({ error: 'Yalnız POST sorğuları qəbul edilir.' }), {
+        status: 405, // Method Not Allowed
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    let examId: string | null = null;
+    try {
+      const body = await req.json(); // Sorğunun body-sini JSON olaraq parse et
+      if (body && body.exam_id && typeof body.exam_id === 'string') {
+        examId = body.exam_id;
+        console.log("Sorğu body-sindən alınan exam_id:", examId);
+      } else {
+        console.error("Sorğu body-sində 'exam_id' tapılmadı və ya string deyil. Body:", body);
+        throw new Error("Sorğu body-sində 'exam_id' tapılmadı və ya düzgün formatda deyil.");
+      }
+    } catch (e) {
+      console.error("JSON body parse edilərkən və ya exam_id alınarkən xəta:", e.message);
+      return new Response(JSON.stringify({ error: `Sorğu body-si parse edilə bilmədi: ${e.message}` }), {
+        status: 400, // Bad Request
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
     
-    console.log("OpenRouter Llama 3 üçün hazırlanmış prompt:", userPrompt);
+    // ----- Hələlik OpenRouter/Llama 3 çağırışı YOXDUR -----
+    // Növbəti addımda bu examId ilə Supabase-dən məlumatları çəkəcəyik
+    // və sonra AI modelinə göndərəcəyik.
 
-    const openRouterApiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    
-    // Model adını OpenRouter sənədlərindən dəqiqləşdirin.
-    // Populyar Llama 3 8B Instruct modelləri:
-    // "meta-llama/llama-3-8b-instruct"
-    // "nousresearch/hermes-2-pro-llama-3-8b" 
-    // "mistralai/mistral-7b-instruct-v0.2" (bu Llama deyil, amma OpenRouter-da var)
-    const modelToUse = "meta-llama/llama-3.3-8b-instruct:free"; // Bunu yoxlayın!
-
-    const requestBody = {
-      model: modelToUse, 
-      messages: [
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      // temperature: 0.7, // Könüllü: cavabın yaradıcılıq dərəcəsi
-      // max_tokens: 500,  // Könüllü: maksimum cavab uzunluğu
-    };
-
-    console.log("OpenRouter-a göndərilən body:", JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch(openRouterApiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        // Tövsiyə olunan OpenRouter başlıqları (saytınızın URL-i və ya tətbiq adınızla əvəz edin):
-        'HTTP-Referer': 'https://sina-app.com', // Öz saytınızın URL-i və ya tətbiq adınız
-        'X-Title': 'SINA Tətbiqi',           // Tətbiqinizin adı
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    const responseDataText = await response.text(); // Əvvəlcə mətn olaraq alaq ki, JSON parse xətası olarsa görək
-    console.log(`OpenRouter API cavabı (${response.status}):`, responseDataText);
-
-
-    if (!response.ok) {
-      let detailErrorMessage = responseDataText;
-      try {
-        const parsedError = JSON.parse(responseDataText);
-        detailErrorMessage = parsedError.error?.message || responseDataText;
-      } catch (e) { /* ignore parsing error if not JSON */ }
-      throw new Error(`OpenRouter API xətası: ${response.status} ${response.statusText}. Detal: ${detailErrorMessage}`);
-    }
-
-    const responseData = JSON.parse(responseDataText); // İndi JSON olaraq parse edək
-    const analysisText = responseData.choices?.[0]?.message?.content?.trim() || "Modeldən mətn cavabı alınmadı və ya format fərqlidir.";
-
-    console.log("Modeldən alınan son cavab:", analysisText);
-
+    console.log(`exam_id (${examId}) uğurla alındı. Funksiya normal şəkildə başa çatır.`);
     return new Response(
-      JSON.stringify({ analysis: analysisText }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        received_exam_id: examId, 
+        message: "exam_id uğurla alındı. Növbəti addım: Bu ID ilə imtahan detallarını Supabase-dən çəkmək." 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error) {
-    console.error('Edge Function xətası detalları:', error); // error.stack-i də loglaya bilərsiniz
+    console.error('Edge Function-da ümumi xəta:', error.message, error.stack);
     return new Response(
-      JSON.stringify({ error: error.message || 'Naməlum server xətası' }),
+      JSON.stringify({ error: error.message || 'Naməlum server xətası baş verdi.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

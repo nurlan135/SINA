@@ -1,0 +1,2 @@
+// emptyMock.js
+module.exports = {};

@@ -29,7 +29,7 @@ serve(async (req: Request) => {
     }
 
     // Supabase klientini yaradırıq
-    const supabaseAdmin: SupabaseClient = createClient(projectUrl, projectAnonKey);
+    //const supabaseAdmin: SupabaseClient = createClient(projectUrl, projectAnonKey);
     const supabaseAdmin: SupabaseClient = createClient(projectUrl, supabaseServiceKey, {
     auth: { autoRefreshToken: false, persistSession: false }
 });

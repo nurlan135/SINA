@@ -4,8 +4,9 @@ on:
   push:
     branches:
       - master # SİZİN ƏSAS BRANCH-İNİZİN ADI
-   #paths:
-    # - 'supabase/functions/**'
+    paths:
+      - 'supabase/functions/**' # Bu sətri geri əlavə edin
+      - '.github/workflows/**'  # Workflow faylı dəyişdikdə də işə düşsün
   workflow_dispatch:
 
 jobs:

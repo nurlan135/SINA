@@ -61,18 +61,22 @@ serve(async (req: Request) => {
         incorrect_answers_count,
         unanswered_count,
         percentage,
-        exams!inner (
+        exams!inner ( // !inner join qalır, çünki exams məlumatı mütləqdir
           subject_ids,
           num_questions_requested,
           status
         )
       `)
       .eq('exam_id', examId)
-      .single();
+      .limit(1)        // YENİ: Nəticəni bir sətirlə məhdudlaşdır
+      .maybeSingle();  // YENİ: Ya bir sətir, ya da null qaytar
 
-    if (resultError) throw new Error(`İmtahan nəticələri çəkilərkən xəta: ${resultError.message}`);
-    if (!examResultData) throw new Error(`Bu exam_id (${examId}) üçün nəticə tapılmadı.`);
-    if (!examResultData.exams) throw new Error(`Nəticəyə bağlı imtahan məlumatı tapılmadı.`);
+     if (resultError) { /* ... */ }
+    if (!examResultData) { // .maybeSingle() null qaytara bilər
+        console.error(`Bu exam_id (${examId}) üçün nəticə tapılmadı (maybeSingle null qaytardı).`);
+        throw new Error(`Bu exam_id (${examId}) üçün nəticə tapılmadı.`);
+    }
+    if (!examResultData.exams) { /* ... */ }
 
     // 2. Verilmiş cavablar və sualların detalları
     const { data: answersWithQuestions, error: answersError } = await supabaseAdmin

@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - master # SİZİN ƏSAS BRANCH-İNİZİN ADI
-    paths:
-      - 'supabase/functions/**'
+   #paths:
+    # - 'supabase/functions/**'
   workflow_dispatch:
 
 jobs:
